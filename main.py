@@ -1,4 +1,5 @@
 import math
+import csv
 
 features = []
 
@@ -70,6 +71,11 @@ def continuousReport(file_data):
     feature_data = []
     not_missing = []
 
+    csvfile = open('c11347281CONT.csv', 'wb')
+    fieldnames = ['Feature', 'Count', 'Min', 'Max', 'Mean', 'Median',
+                  'Miss %', '1st Quart', '3rd Quart', 'Standard Deviation', 'Cardinality']
+    contwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
     for f in features:
         feature_data = [x[f] for x in file_data if is_number(x[f])]
         temp = [x for x in feature_data if x is not None]
@@ -116,11 +122,13 @@ def continuousReport(file_data):
             std_dev = math.sqrt(temp)
 
             # Get cardinal values
-            card_values = {}
-            for v in not_missing:
-                card_values[v] = card_values.get(v, 0) + 1
+            card_values = len(set(not_missing))
 
-
+            #contwriter.writerow(features)
+            contwriter.writerow({'Feature': f})
+            contwriter.writerow({'Count': count, 'Min': min_value, 'Max': max_value, 'Mean': mean,
+                                'Median': median_value, 'Miss %': miss_percent, '1st Quart': quart1,
+                                '3rd Quart': quart3, 'Standard Deviation': std_dev, 'Cardinality': card_values})
 
 def categoricalReport(file_data):
     """ Generate categorical report
@@ -128,7 +136,11 @@ def categoricalReport(file_data):
 
     report = {}
 
-    #print "" + file_data.__str__()
+    csvfile = open('c11347281CAT.csv', 'w')
+    fieldnames = ['Feature', 'Count','Cardinality', 'Mode', 'Mode Count',
+                  'Mode %', '2nd Mode', '2nd Mode Count', '2nd Mode %']
+    catwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
     for f in features:
         feature_data = [x[f] for x in file_data if is_number(x[f])]
         not_missing = [x for x in feature_data if x is not None]
