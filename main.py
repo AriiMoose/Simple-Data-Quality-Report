@@ -1,5 +1,7 @@
 import math
 import csv
+import statistics
+from collections import Counter
 
 features = []
 
@@ -33,7 +35,7 @@ def read_data(file_in):
     """
     feature_list = []
 
-    with open(file_in) as f:
+    with open(file_in, 'r') as f:
         for line in f:
             line = line[0:-1]
             line = line.strip(' ')
@@ -53,27 +55,17 @@ def read_data(file_in):
 
     return data_list
 
-def median(lst):
-    lst = sorted(lst)
-
-    if len(lst) < 1:
-            return None
-    if len(lst) %2 == 1:
-            return lst[((len(lst)+1)/2)-1]
-    if len(lst) %2 == 0:
-            return float(sum(lst[(len(lst)/2)-1:(len(lst)/2)+1]))/2.0
-
 def continuousReport(file_data):
     """ Generate continuous report
     """
-    print "" + file_data.__str__()
     report = {}
     feature_data = []
     not_missing = []
 
-    csvfile = open('c11347281CONT.csv', 'wb')
-    fieldnames = ['Feature', 'Count', 'Min', 'Max', 'Mean', 'Median',
-                  'Miss %', '1st Quart', '3rd Quart', 'Standard Deviation', 'Cardinality']
+    csvfile = open('c11347281CONT.csv', 'w', newline = "")
+    fieldnames = ['Feature', 'Count', 'Miss %', 'Cardinality',
+                  'Min', '1st Quart', 'Mean', 'Median',
+                  '3rd Quart', 'Max', 'Standard Deviation']
     contwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
     for f in features:
@@ -108,27 +100,17 @@ def continuousReport(file_data):
             mean = sum(not_missing)/len(not_missing)
 
             # Median
-            median_value = median(not_missing)
+            median_value = statistics.median(not_missing)
 
             # Standard Deviation
-            temp = 0
-
-            for z in not_missing:
-                """
-                not_missing is a list, when you do for z in not_missing z is the value not the key
-                """
-                temp += (z - mean) ** 2
-
-            std_dev = math.sqrt(temp)
+            std_dev = statistics.stdev(not_missing)
 
             # Get cardinal values
             card_values = len(set(not_missing))
 
-            #contwriter.writerow(features)
-            contwriter.writerow({'Feature': f})
-            contwriter.writerow({'Count': count, 'Min': min_value, 'Max': max_value, 'Mean': mean,
-                                'Median': median_value, 'Miss %': miss_percent, '1st Quart': quart1,
-                                '3rd Quart': quart3, 'Standard Deviation': std_dev, 'Cardinality': card_values})
+            contwriter.writerow({'Feature': f, 'Count': count, 'Miss %': miss_percent, 'Cardinality': card_values,
+                                 'Min': min_value, '1st Quart': quart1, 'Mean': mean, 'Median': median_value,
+                                 '3rd Quart': quart3, 'Max': max_value, 'Standard Deviation': std_dev})
 
 def categoricalReport(file_data):
     """ Generate categorical report
@@ -137,7 +119,8 @@ def categoricalReport(file_data):
     report = {}
 
     csvfile = open('c11347281CAT.csv', 'w')
-    fieldnames = ['Feature', 'Count','Cardinality', 'Mode', 'Mode Count',
+    fieldnames = ['Feature', 'Count', 'Missing %',
+                  'Cardinality', 'Mode', 'Mode Count',
                   'Mode %', '2nd Mode', '2nd Mode Count', '2nd Mode %']
     catwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -153,85 +136,30 @@ def categoricalReport(file_data):
             miss_percent = missing_counter/count * 100
 
             # Cardinal values
-            card_values = {}
-            for v in not_missing:
-                card_values[v] = card_values.get(v, 0) + 1
+            card_values = len(set(not_missing))
 
             # First Mode
-            mode1_holder = first_mode(not_missing)
+            temp_list = Counter(not_missing)
+            mode1_temp = temp_list.most_common(1)
+            mode1_holder = mode1_temp[0]
             mode1 = mode1_holder[0]
-            mode1_count = mode1_holder[1]
+            mode1_count = temp_list.most_common().__len__()
             mode1_percent = (count * 100) / mode1_count
 
             # Second Mode
-            mode2_holder = second_mode(not_missing)
-            mode2 = mode2_holder[0]
-            mode2_count = mode2_holder[1]
+            temp_list2 = Counter(not_missing)
+            mode2_temp = temp_list2.most_common(2)
+            mode2_holder= mode2_temp[0]
+            mode2 = mode1_holder[0]
+            mode2_count = temp_list2.most_common().__len__()
             mode2_percent = (count * 100) / mode2_count
 
-def first_mode(list):
-    d = {}
-    results = []
-
-    # Count values
-    for i in list:
-        try:
-            d[i] += 1
-        except(KeyError):
-            d[i] = 1
-
-    # Find max
-    keys = d.keys()
-    maximum = 0
-
-    for key in keys[1:]:
-        if d[key] > maximum:
-            maximum = d[key]
-
-    for key in keys:
-        if d[key] == maximum:
-            results.append(key)
-            results.append(maximum)
-
-    return results
-
-def second_mode(list):
-    d = {}
-    results = []
-
-    # Count values
-    for i in list:
-        try:
-            d[i] += 1
-        except(KeyError):
-            d[i] = 1
-
-    # Find max
-    keys = d.keys()
-    maximum = 0
-
-    for key in keys[1:]:
-        if d[key] > maximum:
-            maximum = d[key]
-
-    # Find second highest
-    second_highest = 0
-
-    for key in keys[1:]:
-        if d[key] < maximum:
-            for k in keys:
-                if d[key] > d[k]:
-                    second_highest = d[key]
-
-    for key in keys:
-        if d[key] == second_highest:
-            results.append(key)
-            results.append(second_highest)
-
-    return results
+            catwriter.writerow({'Feature': f, 'Count': count, 'Missing %': miss_percent,
+                                'Cardinality': card_values, 'Mode': mode1, 'Mode Count': mode1_count,
+                                'Mode %': mode1_percent, '2nd Mode': mode2, '2nd Mode Count':mode2_count, '2nd Mode %': mode2_percent})
 
 if __name__ == '__main__':
-    read_features("Data\Featurenames.txt")
-    data = read_data("Data\DataSet.txt")
+    read_features("./Data/Featurenames.txt")
+    data = read_data("./Data/DataSet.txt")
     continuousReport(data)
     categoricalReport(data)
