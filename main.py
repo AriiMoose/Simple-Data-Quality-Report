@@ -1,4 +1,4 @@
-import math
+import numpy as np
 import csv
 import statistics
 from collections import Counter
@@ -47,7 +47,7 @@ def read_data(file_in):
             feature_map = {features[i]: entry[i] for i, n in enumerate(entry)}
             for f in feature_map:
                 feature_map[f] = feature_map[f].strip(' ')
-                if feature_map[f] == '?':
+                if feature_map[f] == '?' or feature_map[f] == 0:
                     feature_map[f] = None
 
             feature_list.append(feature_map)
@@ -63,13 +63,15 @@ def continuousReport(file_data):
     not_missing = []
 
     csvfile = open('c11347281CONT.csv', 'w', newline = "")
-    fieldnames = ['Feature', 'Count', 'Miss %', 'Cardinality',
+    fieldnames = ['FEATURENAME', 'Count', 'Miss %', 'Cardinality',
                   'Min', '1st Quart', 'Mean', 'Median',
                   '3rd Quart', 'Max', 'Standard Deviation']
     contwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    contwriter_header = csv.writer(csvfile, delimiter=",")
+    contwriter_header.writerow(fieldnames)
 
     for f in features:
-        feature_data = [x[f] for x in file_data if is_number(x[f])]
+        feature_data = [x[f] for x in file_data if is_number(x[f]) or x[f] is None]
         temp = [x for x in feature_data if x is not None]
 
         if len(feature_data) != 0:
@@ -91,9 +93,9 @@ def continuousReport(file_data):
 
             # Quart One & Two
             not_missing.sort()
-            n = len(not_missing)
-            quart1 = n * (25/100)
-            quart3 = n * (75/100)
+            n = np.array(not_missing)
+            quart1 = np.percentile(n, 25)
+            quart3 = np.percentile(n, 75)
 
             # Mean
             #print not_missing
@@ -108,7 +110,7 @@ def continuousReport(file_data):
             # Get cardinal values
             card_values = len(set(not_missing))
 
-            contwriter.writerow({'Feature': f, 'Count': count, 'Miss %': miss_percent, 'Cardinality': card_values,
+            contwriter.writerow({'FEATURENAME': f, 'Count': count, 'Miss %': miss_percent, 'Cardinality': card_values,
                                  'Min': min_value, '1st Quart': quart1, 'Mean': mean, 'Median': median_value,
                                  '3rd Quart': quart3, 'Max': max_value, 'Standard Deviation': std_dev})
 
@@ -119,13 +121,17 @@ def categoricalReport(file_data):
     report = {}
 
     csvfile = open('c11347281CAT.csv', 'w')
-    fieldnames = ['Feature', 'Count', 'Missing %',
+    fieldnames = ['FEATURENAME', 'Count', 'Missing %',
                   'Cardinality', 'Mode', 'Mode Count',
                   'Mode %', '2nd Mode', '2nd Mode Count', '2nd Mode %']
+    catwriter_header = csv.writer(csvfile, delimiter=",")
+    catwriter_header.writerow(fieldnames)
     catwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    iterfeatures = iter(features)
+    next(iterfeatures)
 
-    for f in features:
-        feature_data = [x[f] for x in file_data if is_number(x[f])]
+    for f in iterfeatures:
+        feature_data = [x[f] for x in file_data if not is_number(x[f])]
         not_missing = [x for x in feature_data if x is not None]
 
         if len(feature_data) != 0:
@@ -154,7 +160,7 @@ def categoricalReport(file_data):
             mode2_count = temp_list2.most_common().__len__()
             mode2_percent = (count * 100) / mode2_count
 
-            catwriter.writerow({'Feature': f, 'Count': count, 'Missing %': miss_percent,
+            catwriter.writerow({'FEATURENAME': f, 'Count': count, 'Missing %': miss_percent,
                                 'Cardinality': card_values, 'Mode': mode1, 'Mode Count': mode1_count,
                                 'Mode %': mode1_percent, '2nd Mode': mode2, '2nd Mode Count':mode2_count, '2nd Mode %': mode2_percent})
 
